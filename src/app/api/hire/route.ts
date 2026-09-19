@@ -1,23 +1,15 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { evaluateHire } from "@/lib/diploma";
+import { evaluateHire, getDiploma } from "@/lib/university";
 import type { Diploma } from "@/lib/types";
 
-const Body = z.object({
-  diploma: z.object({
-    id: z.string(),
-    studentName: z.string(),
-    studentAns: z.string(),
-    issuerAns: z.string(),
-    issuerDomain: z.string(),
-    program: z.string(),
-    issuedAt: z.string(),
-    signature: z.string(),
-  }),
-});
-
 export async function POST(req: Request) {
-  const { diploma } = Body.parse(await req.json()) as { diploma: Diploma };
-  const result = evaluateHire(diploma);
+  const body = await req.json();
+  const diploma = (body.diploma ?? getDiploma(body.diplomaId)) as Diploma | undefined;
+  if (!diploma) {
+    return NextResponse.json({ error: "Diploma required" }, { status: 400 });
+  }
+  const tier = z.enum(["bronze", "silver", "gold"]).default("silver").parse(body.tier);
+  const result = evaluateHire(diploma, tier);
   return NextResponse.json(result);
 }
